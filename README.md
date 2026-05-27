@@ -2,6 +2,10 @@
 
 A modern, user-friendly desktop application to track your daily expenses with a beautiful dark-themed interface.
 
+![Expense Tracker Banner](screenshots/main_page.png)
+![Expense Tracker Banner](screenshots/Total.png)
+![Expense Tracker Banner](screenshots/chart.png)
+
 Built with **CustomTkinter** and **SQLite**.
 
 ---
