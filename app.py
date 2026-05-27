@@ -3,18 +3,24 @@ from tkinter import messagebox, ttk
 import pandas as ps
 import sqlite3
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 interface = ctk.CTk()
-interface.title("Expense Tracker")
-interface.geometry("500x700")
-ctk.set_appearance_mode("system")
+interface.title("🏦 Expense Tracker")
+interface.geometry("500x600")
+interface.configure(fg_color="#1e1e1e")
+ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 conn = sqlite3.connect("expenses.db")
 cursor = conn.cursor()
 
 ############## Set app title ##############################################################
-ctk.CTkLabel(interface, text = "Simple Expense Tracker").pack(pady=5)
-
+ctk.CTkLabel(
+    interface,
+    text="🏦 Expense Tracker",
+    font=("Open Sans", 28, "bold"),
+    text_color="#00ff99"
+).pack(pady=15)
 ############### Add data to pandas #######################################################
 def load_data():
     conn = sqlite3.connect("expenses.db")
@@ -32,11 +38,32 @@ def show_total():
 def category_summary():
     df = load_data()
     summary = df.groupby("category")["amount"].sum()
+    if df.empty:
+        messagebox.showinfo("Total Expense", "No data !")
+        return
     text =""
     for cat, amt in summary.items():
         text += f"{cat}: Rs.{amt:.2f}\n"
 
     messagebox.showinfo("Category Summary", text)
+
+########################## Show bar chart #######################################
+def show_bar_chart():
+    df = load_data()
+    if df.empty:
+        messagebox.showinfo("Graph", "No data !")
+        return
+    summary = df.groupby("category")["amount"].sum()
+    plt.style.use("dark_background")
+    plt.figure(figsize=(6,4))
+    plt.bar(summary.index, summary.values, color="#4CAF50")
+    plt.title("Expense by Category", color="white")
+    plt.xlabel("Category", color="white")
+    plt.ylabel("Amount", color="white")
+    plt.xticks(rotation=30, color="white")
+    plt.yticks(color="white")
+    plt.tight_layout()
+    plt.show()
     
 ############# Configure Inputs ############################################################
 ctk.CTkLabel(interface, text="Description").pack(pady=2)
@@ -58,9 +85,15 @@ def read_response():
     query = """SELECT id, title, amount, category, date FROM expenses"""
     cursor.execute(query)
     rows = cursor.fetchall()
-    for row in rows:
-        expense_list.insert("", ctk.END, values=row)
-        
+    for index, row in enumerate(rows, start=1):
+        expense_list.insert("", ctk.END, values=(
+            index,      # Fix index values 
+            row[0],
+            row[1],
+            f"Rs.{row[2]:.2f}",
+            row[3],
+            row[4]
+        ))
 ############# Save User response to the database #############################################################
 def submit_response():
     title = title_entry.get().strip()
@@ -96,14 +129,14 @@ def delete_expense():
         return
 
     item = expense_list.item(selected[0])
-    expense_id = item["values"][0] 
+    expense_id = item["values"][1]  # DB_ID 
     query = "DELETE FROM expenses WHERE id=?"
     cursor.execute(query, (expense_id,))
     conn.commit()
     read_response()
     messagebox.showinfo("Deleted", "Expense deleted successfully") 
       
-############## Create Submit Button #########################################################
+############## Create Buttons #########################################################
 ctk.CTkButton(interface, text = "Add Expense", command = submit_response, width=220, height=35).pack(pady=10)
 
 ctk.CTkButton(interface, text="Total Expense", command=show_total, width=220, height=35).pack(pady=5)
@@ -112,32 +145,58 @@ ctk.CTkButton(interface, text="Category Summary", command=category_summary, widt
 
 ctk.CTkButton(interface, text="Delete Expense", command=delete_expense, width=220, height=35).pack(pady=5)
 
+ctk.CTkButton(interface, text="Bar Chart", command=show_bar_chart, width=220, height=35).pack(pady=5)
+
+#############################################################################################
+def suggest_category(text):
+    text = text.lower()
+    if any(x in text for x in ["rice", "food", "buns", "meal", "dinner", "breakfast", "lunch"]):
+        return "Food"
+    elif any(x in text for x in ["uber", "bus", "train", "pickme", "trivil", "hire", "bike", "petrol"]):
+        return "Transport"
+    elif any(x in text for x in ["bill", "electric", "water"]):
+        return "Bills"
+
+################# Auto Suggest ###############################################################
+def auto_fill_category(event=None):
+    text = title_entry.get()
+    if text:
+        category_entry.delete(0, ctk.END)
+        category_entry.insert(0, suggest_category(text))
+title_entry.bind("<KeyRelease>", auto_fill_category)
+
 ################# Create Output Box #########################################################
 table_frame = ctk.CTkFrame(interface)
 table_frame.pack(pady=10, fill="both", expand=True)
 
-# ===== Treeview =====
+################## Treeview #################################################################
 expense_list = ttk.Treeview(
     table_frame,
-    columns=("ID", "Title", "Amount", "Category", "Date"),
+    columns=("Index", "DB_ID", "Title", "Amount", "Category", "Date"),
+    
     show="headings"
+    
 )
 
-expense_list.heading("ID", text="ID")
+expense_list.heading("Index", text="No")
+expense_list.heading("DB_ID", text="DB_ID")  
 expense_list.heading("Title", text="Title")
 expense_list.heading("Amount", text="Amount")
 expense_list.heading("Category", text="Category")
 expense_list.heading("Date", text="Date")
 
-expense_list.column("ID", width=50, anchor="center")
+expense_list.column("Index", width=50, anchor="w")
+expense_list.column("DB_ID", width=0, stretch=False) 
 expense_list.column("Title", width=120)
-expense_list.column("Amount", width=100, anchor="center")
+expense_list.column("Amount", width=100, anchor="w")
 expense_list.column("Category", width=120)
-expense_list.column("Date", width=100, anchor="center")
+expense_list.column("Date", width=100, anchor="w")
+
 ##############################################################################################
 scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=expense_list.yview)
 expense_list.configure(yscrollcommand=scrollbar.set)
-######################## Improve table look ##################################################
+
+######################## Improve Treeview look ##################################################
 style = ttk.Style()
 style.theme_use("clam")
 
