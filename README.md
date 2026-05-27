@@ -32,11 +32,11 @@ Built with **CustomTkinter** and **SQLite**.
 
 ## 🤝 Contributing
 - **You are welcome to improve this project. Possible enhancements:**
--Export data to CSV or Excel
--Edit existing expenses
--Monthly and yearly reports
--Search and filter options
--Budget planning feature
+- Export data to CSV or Excel
+- Edit existing expenses
+- Monthly and yearly reports
+- Search and filter options
+- Budget planning feature
 
 ---
 
