@@ -1,9 +1,17 @@
+import os
+
+os.environ['TCL_LIBRARY'] = r"C:\Users\Gayanuka\AppData\Local\Programs\Python\Python314\tcl\tcl8.6"
+os.environ['TK_LIBRARY'] = r"C:\Users\Gayanuka\AppData\Local\Programs\Python\Python314\tcl\tk8.6"
+
+import customtkinter as ctk
+from tkinter import messagebox, ttk
 import customtkinter as ctk
 from tkinter import messagebox, ttk
 import pandas as ps
 import sqlite3
 from datetime import datetime
 import matplotlib.pyplot as plt
+import pickle 
 
 interface = ctk.CTk()
 interface.title("🏦 Expense Tracker")
@@ -14,13 +22,16 @@ ctk.set_default_color_theme("green")
 conn = sqlite3.connect("expenses.db")
 cursor = conn.cursor()
 
+########## Load AI model ##################################################################
+with open("expense_model.pkl", "rb") as f:
+    MODEL = pickle.load(f)
+
+with open("vectorizer.pkl", "rb") as v:
+    VECTORIZER = pickle.load(v)
+    
 ############## Set app title ##############################################################
-ctk.CTkLabel(
-    interface,
-    text="🏦 Expense Tracker",
-    font=("Open Sans", 28, "bold"),
-    text_color="#00ff99"
-).pack(pady=15)
+ctk.CTkLabel(interface,text="🏦 Expense Tracker",font=("Open Sans", 28, "bold"),text_color="#00ff99").pack(pady=15)
+
 ############### Add data to pandas #######################################################
 def load_data():
     conn = sqlite3.connect("expenses.db")
@@ -147,22 +158,20 @@ ctk.CTkButton(interface, text="Delete Expense", command=delete_expense, width=22
 
 ctk.CTkButton(interface, text="Bar Chart", command=show_bar_chart, width=220, height=35).pack(pady=5)
 
-#############################################################################################
-def suggest_category(text):
-    text = text.lower()
-    if any(x in text for x in ["rice", "food", "buns", "meal", "dinner", "breakfast", "lunch"]):
-        return "Food"
-    elif any(x in text for x in ["uber", "bus", "train", "pickme", "trivil", "hire", "bike", "petrol"]):
-        return "Transport"
-    elif any(x in text for x in ["bill", "electric", "water"]):
-        return "Bills"
+################# AI Predict #################################################################
+def Ai_predict(text):
+    if not text.strip():
+        return ""
+    vector = VECTORIZER.transform([text])
+    category = MODEL.predict(vector)[0]
+    return category
 
 ################# Auto Suggest ###############################################################
 def auto_fill_category(event=None):
     text = title_entry.get()
     if text:
         category_entry.delete(0, ctk.END)
-        category_entry.insert(0, suggest_category(text))
+        category_entry.insert(0, Ai_predict(text))
 title_entry.bind("<KeyRelease>", auto_fill_category)
 
 ################# Create Output Box #########################################################
